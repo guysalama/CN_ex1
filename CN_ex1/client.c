@@ -1,9 +1,3 @@
-/*
-* Client.c
-*
-*  Created on: Oct 29, 2015
-*      Author: dorbank
-*/
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,7 +45,6 @@ int receiveAll(int s, char *buf, int *len);
 
 int main(int argc, char const *argv[])
 {
-	/*printf("Client Started\n");*/
 	char port[20];
 	char address[50];
 
@@ -77,23 +70,16 @@ int main(int argc, char const *argv[])
 		sscanf(argv[2], "%s", &port);
 	}
 
-	/*printf("trying to get socket\n");*/
-	// Get socket
-	int sock = socket(AF_INET, SOCK_STREAM, 0);
+	int sock = socket(AF_INET, SOCK_STREAM, 0); // Get socket
 	if (sock == -1)
 	{
 		printf("Error opening the socket: %s\n", strerror(errno));
 		return errno;
 	}
-	/*printf("Succesfully got a socket number: %d\n", sock);*/
-
-	// Connect to server
-	sock = connectToServer(sock, address, port);
-
+	sock = connectToServer(sock, address, port); // Connect to server
 	char buf[msgSize];
 	struct move Move;
-	// Get initial data
-	struct gameData game = receiveDataFromServer(sock);
+	struct gameData game = receiveDataFromServer(sock); // Get initial data
 
 	printGameState(game);
 	while (game.win == -1){
@@ -104,15 +90,10 @@ int main(int argc, char const *argv[])
 			exit(0);
 		}
 		game = receiveDataFromServer(sock);
-
-		// Check if move was valid
-		printValid(game);
-		// keep on playing
-		printGameState(game);
+		printValid(game); // Check if move was valid
+		printGameState(game); // keep on playing
 	}
-
 	printWinner(game);
-
 	return 0;
 }
 
@@ -124,7 +105,6 @@ int connectToServer(int sock, const char* address, char* port){
 	hints.ai_socktype = SOCK_STREAM;
 
 	if ((rv = getaddrinfo(address, port, &hints, &servinfo)) != 0) {
-		//if ((rv = getaddrinfo("nova.cs.tau.ac.il", "6444", &hints, &servinfo)) != 0) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
 		close(sock);
 		exit(1);
@@ -137,16 +117,11 @@ int connectToServer(int sock, const char* address, char* port){
 			perror("socket");
 			continue;
 		}
-
-		/*printf("trying to connect\n");*/
 		if (connect(sock, p->ai_addr, p->ai_addrlen) == -1) {
 			//close(sock);
 			perror("connect");
 			continue;
 		}
-
-		/*printf("Connected\n");*/
-
 		break; // if we get here, we must have connected successfully
 	}
 
@@ -158,7 +133,6 @@ int connectToServer(int sock, const char* address, char* port){
 	}
 
 	freeaddrinfo(servinfo); // all done with this structure
-
 	return sock;
 }
 
@@ -168,28 +142,23 @@ struct move getMoveFromInput(int sock){
 	char cmd[10];
 
 	printf("Your turn:\n");
-
 	fgets(cmd, 10, stdin);
-	// Exit if user put Q
-	if (strcmp(cmd, "Q") == 0)
+	if (strcmp(cmd, "Q") == 0) // Exit if user put Q
 	{
 		close(sock);
 		exit(0);
 	}
-
 	sscanf(cmd, "%c %d", &heapC, &amount);
-	heap = (int)heapC - (int)'A';
+	heap = (int) heapC - (int) 'A';
 	if (heap < 0 || heap > HEAPS_NUM - 1)
 	{
 		printf("Illegal input!!!\n");
 		close(sock);
 		exit(1);
 	}
-
 	struct move Move;
 	Move.heap = heap;
 	Move.amount = amount;
-
 	return Move;
 }
 
@@ -198,42 +167,26 @@ struct gameData receiveDataFromServer(int sock)
 	char buf[msgSize];
 	struct gameData game;
 	int rec = receiveAll(sock, buf, &msgSize);
-
 	if (rec == -1)
 	{
 		fprintf(stderr, "failed to receive initial data\n");
 		close(sock);
 		exit(2);
 	}
-
 	game = parseDataFromServer(buf);
-
-	/*printf("Data Received from server: %s\n",buf);*/
-
 	return game;
 }
 
 void printValid(struct gameData game)
 {
-	if (game.valid == 1)
-	{
-		printf("Move accepted\n");
-	}
-	else{
-		printf("Illegal move\n");
-	}
+	if (game.valid == 1) printf("Move accepted\n");
+	else printf("Illegal move\n");
 }
 
 void printWinner(struct gameData game)
 {
-	if (game.win == 1)
-	{
-		printf("You win!\n");
-	}
-	else if (game.win == 2)
-	{
-		printf("Server win!\n");
-	}
+	if (game.win == 1) printf("You win!\n");
+	else if (game.win == 2) printf("Server win!\n");
 }
 
 void printGameState(struct gameData game){
@@ -245,16 +198,14 @@ void printGameState(struct gameData game){
 struct gameData parseDataFromServer(char buf[msgSize]){
 	struct gameData game;
 	sscanf(buf, "%d$%d$%d$%d$%d", &game.valid, &game.win, &game.heaps[0], &game.heaps[1], &game.heaps[2]);
-
 	return game;
 }
 
 
 int sendAll(int s, char *buf, int *len) {
-	int total = 0; /* how many bytes we've sent */
-	int bytesleft = *len; /* how many we have left to send */
+	int total = 0; // how many bytes we've sent
+	int bytesleft = *len; // how many we have left to send 
 	int n;
-
 	while (total < *len) {
 		n = send(s, buf + total, bytesleft, 0);
 		//checkForZeroValue(n,s);
@@ -262,14 +213,13 @@ int sendAll(int s, char *buf, int *len) {
 		total += n;
 		bytesleft -= n;
 	}
-	*len = total; /* return number actually sent here */
-
-	return n == -1 ? -1 : 0; /*-1 on failure, 0 on success */
+	*len = total; // return number actually sent here 
+	return n == -1 ? -1 : 0; // -1 on failure, 0 on success
 }
 
 int receiveAll(int s, char *buf, int *len) {
-	int total = 0; /* how many bytes we've received */
-	size_t bytesleft = *len; /* how many we have left to receive */
+	int total = 0; // how many bytes we've received
+	size_t bytesleft = *len; // how many we have left to receive
 	int n;
 
 	while (total < *len) {
@@ -279,9 +229,8 @@ int receiveAll(int s, char *buf, int *len) {
 		total += n;
 		bytesleft -= n;
 	}
-	*len = total; /* return number actually sent here */
-
-	return n == -1 ? -1 : 0; /*-1 on failure, 0 on success */
+	*len = total; // return number actually sent here
+	return n == -1 ? -1 : 0; // -1 on failure, 0 on success
 }
 
 // void checkForZeroValue(int num, int sock){

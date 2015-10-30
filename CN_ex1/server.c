@@ -1,9 +1,3 @@
-/*
-* Server.c
-*
-*  Created on: Oct 29, 2015
-*      Author: dorbank
-*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h> // for open flags
@@ -27,6 +21,7 @@
 
 int MSG_SIZE = 50;
 int HEAPS_NUM = 3;
+
 struct gameData{
 	int valid;
 	int win;
@@ -54,21 +49,19 @@ int main(int argc, char** argv){
 	struct sockaddr_in myaddr;
 	struct sockaddr addrBind;
 	struct in_addr inAddr;
-	/*struct socklen_t *addrlen;*/
 	char buf[MSG_SIZE];
 
 	int i, port;
 	struct gameData game;
 	struct move clientMove;
 
-	/*Region input Check*/
+	// Region input Check
 #if (1)
 	if (argc<4 || argc>5){
 		printf("Illegal arguments\n");
 		exit(1);
 	}
 
-	/*printf("argv[1] %s\n", argv[2]);*/
 	for (i = 0; i<HEAPS_NUM; i++){
 		sscanf(argv[i + 1], "%d", &game.heaps[i]);
 		if (game.heaps[i]<1 || game.heaps[i]>1000){
@@ -77,22 +70,13 @@ int main(int argc, char** argv){
 		}
 	}
 
-	if (argc == 5){
-		sscanf(argv[4], "%d", &port);
-	}
-	else{
-		port = 6444;
-	}
+	if (argc == 5) sscanf(argv[4], "%d", &port);
+	else port = 6444;
 
 #endif
 
-	/*printf("Set all arguments, start server\n");*/
-
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	checkForNegativeValue(sock, "socket", sock);
-	/*printf("Succesfully got a socket number: %d\n", sock);*/
-
-
 	addrBind.sa_family = AF_INET;
 	myaddr.sin_family = AF_INET;
 	myaddr.sin_port = htons(port);
@@ -100,56 +84,38 @@ int main(int argc, char** argv){
 	myaddr.sin_addr = inAddr;
 	errorIndicator = myBind(sock, &myaddr, sizeof(addrBind));
 	checkForNegativeValue(errorIndicator, "bind", sock);
-	/*printf("Succesfully binded %d\n", sock);*/
-
 	errorIndicator = listen(sock, 5);
 	checkForNegativeValue(errorIndicator, "listen", sock);
-	/*printf("Succesfully started listening: %d\n", sock);*/
-
-	/*	printf("Trying to accept\n");*/
 	sock = accept(sock, (struct sockaddr*)NULL, NULL);
 	checkForNegativeValue(sock, "accept", sock);
-	/*printf("Accepted\n");*/
 
 	game.valid = 1;
 	game.win = -1;
 
 	sprintf(buf, "%d$%d$%d$%d$%d", game.valid, game.win, game.heaps[0], game.heaps[1], game.heaps[2]);
 	while (1){
-		/*printf("trying to send all\n");*/
 		errorIndicator = sendAll(sock, buf, &MSG_SIZE);
 		checkForNegativeValue(errorIndicator, "send", sock);
 
-		// If the game is over the server disconnect
-		if (game.win != -1)
+		if (game.win != -1) // If the game is over the server disconnect
 		{
 			close(sock);
 			exit(0);
 		}
 
 		errorIndicator = receiveAll(sock, buf, &MSG_SIZE);
-		/*printf("Received data: %s with indicator: %d\n",buf, errorIndicator);*/
 		checkForNegativeValue(errorIndicator, "recv", sock);
-
 		sscanf(buf, "%d$%d", &clientMove.heap, &clientMove.amount);
 		CheckAndMakeClientMove(&game, clientMove);
 
-		if (IsBoardClear(game)){
-			// Client win
-			game.win = 1;
-		}
-
+		if (IsBoardClear(game)) game.win = 1; // Client win
 		else{
 			RemoveOnePieceFromBiggestHeap(&game);
-			if (IsBoardClear(game)){
-				// server win
-				game.win = 2;
-			}
+			if (IsBoardClear(game)) game.win = 2; // server win
 		}
 
 		sprintf(buf, "%d$%d$%d$%d$%d", game.valid, game.win, game.heaps[0], game.heaps[1], game.heaps[2]);
 	}
-
 }
 
 void CheckAndMakeClientMove(struct gameData * game, struct move clientMove){
@@ -213,8 +179,8 @@ int IsBoardClear(struct gameData game){
 }
 
 int sendAll(int s, char *buf, int *len) {
-	int total = 0; /* how many bytes we've sent */
-	int bytesleft = *len; /* how many we have left to send */
+	int total = 0; // how many bytes we've sent
+	int bytesleft = *len; // how many we have left to send 
 	int n;
 
 	while (total < *len) {
@@ -224,14 +190,13 @@ int sendAll(int s, char *buf, int *len) {
 		total += n;
 		bytesleft -= n;
 	}
-	*len = total; /* return number actually sent here */
-
-	return n == -1 ? -1 : 0; /*-1 on failure, 0 on success */
+	*len = total; // return number actually sent here
+	return n == -1 ? -1 : 0; // -1 on failure, 0 on success
 }
 
 int receiveAll(int s, char *buf, int *len) {
-	int total = 0; /* how many bytes we've received */
-	size_t bytesleft = *len; /* how many we have left to receive */
+	int total = 0; // how many bytes we've received
+	size_t bytesleft = *len; // how many we have left to receive 
 	int n;
 
 	while (total < *len) {
@@ -241,8 +206,7 @@ int receiveAll(int s, char *buf, int *len) {
 		total += n;
 		bytesleft -= n;
 	}
-	*len = total; /* return number actually sent here */
-
-	return n == -1 ? -1 : 0; /*-1 on failure, 0 on success */
+	*len = total; // return number actually sent here
+	return n == -1 ? -1 : 0; // -1 on failure, 0 on success
 }
 
