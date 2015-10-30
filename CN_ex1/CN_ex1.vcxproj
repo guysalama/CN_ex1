@@ -80,6 +80,8 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\..\..\Source\Repos\Computer-Networking\Practical1\Client.c" />
     <ClCompile Include="..\..\..\..\..\Source\Repos\Computer-Networking\Practical1\Server.c" />
+    <ClCompile Include="client.c" />
+    <ClCompile Include="server.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -21,5 +21,11 @@
     <ClCompile Include="..\..\..\..\..\Source\Repos\Computer-Networking\Practical1\Server.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="client.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="server.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
