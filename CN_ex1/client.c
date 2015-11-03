@@ -205,7 +205,6 @@ void get_client_move(int sock, Move *curr_move){
 		free(word2);
 		curr_move->heap = 0;
 		curr_move->removes = 0; // The removes of an invalid move will be marked with zero  
-		exit(1);
 	}
 	else {
 		curr_move->heap = (int)(word1[0] - 'A');
