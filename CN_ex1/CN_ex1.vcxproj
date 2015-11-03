@@ -81,6 +81,9 @@
     <ClCompile Include="client.c" />
     <ClCompile Include="server.c" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\..\..\Desktop\makefile" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
