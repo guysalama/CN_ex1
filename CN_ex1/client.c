@@ -200,7 +200,7 @@ void get_client_move(int sock, Move *curr_move){
 	word1 = strtok(command, " ");
 	word2 = strtok(NULL, " ");
 	//curr_move = malloc(sizeof(Move));
-	if (length(word1) != 1 || (word1[0] - 'A') < 0 || (word1[0] - 'A' - 1) > HEAPS_NUM || atoi(word2) == 0){ // Verifies the move
+	if (strlen(word1) != 1 || (word1[0] - 'A') < 0 || (word1[0] - 'A' - 1) > HEAPS_NUM || atoi(word2) == 0){ // Verifies the move
 		free(word1);
 		free(word2);
 		curr_move->heap = 0;
