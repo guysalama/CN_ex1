@@ -72,7 +72,7 @@ int main(int argc, char **argv){
 		if (argc == 1) address = DEFAULT_HOST
 	}
 	if (argc == 2 || argc == 3){
-		address = malloc(sizeof(char)*length(argv[1]) + 1);
+		address = malloc(sizeof(char)*strlen(argv[1]) + 1);
 		strcpy(address, argv[1]);
 		if (argc == 3){
 			port = malloc(sizeof(char)*length(argv[2]) + 1);
@@ -87,7 +87,7 @@ int main(int argc, char **argv){
 	}
 	sock = server_connect(sock, address, port); // Connect to server
 	char buf[BUF_SIZE];
-	Move *curr_move = mallac(sizeof(Move));
+	Move *curr_move = malloc(sizeof(Move));
 	Game_state *game = malloc(sizeof(Game_state));
 	receive_data(sock, game); // Get initial data
 	print_heaps(game);
@@ -103,7 +103,7 @@ int main(int argc, char **argv){
 			exit(0);
 		}
 		receive_data(sock, game); // Refresh the data
-		printValid(game); // Check if move was valid
+		print_is_valid_move(game); // Check if move was valid
 		print_heaps(game); // keep on playing
 	}
 	print_winner(game);
@@ -187,7 +187,6 @@ char* input2str(FILE* pFile){
 
 // Gets the client's command and handles it, return a new move to be execute by the server
 void get_client_move(int sock, Move *curr_move){
-	int illgal_input = 0;
 	char * command;
 	char * word1;
 	char * word2;
@@ -212,7 +211,7 @@ void get_client_move(int sock, Move *curr_move){
 		curr_move->removes = atoi(strtok(NULL, " "));
 	}
 	free(command);
-	return 0;
+	return;
 }
 
 // Handles the data that received from the server
@@ -226,7 +225,7 @@ void receive_data(int sock, Game_state *game){
 		exit(2);
 	}
 	sscanf(buf, "%d$%d$%d$%d$%d", &game->valid, &game->win, &game->heaps[0], &game->heaps[1], &game->heaps[2]);
-	return 0;
+	return;
 }
 
 // Prints an error if the move is illeagal or announce that the move accepted
