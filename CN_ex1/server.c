@@ -53,7 +53,7 @@ int main(int argc, char **argv){
 	char buf[BUF_SIZE];
 
 	int i, port;
-	Move *client_move = mallac(sizeof(Move));
+	Move *client_move = malloc(sizeof(Move));
 	Game_state *game = malloc(sizeof(Game_state));
 	// Initializes the game state and validates the input
 	if (argc < 4 || argc > 5){
@@ -97,10 +97,10 @@ int main(int argc, char **argv){
 		op_check(receive_all(sock, buf, &msg_len), "recv", sock);
 		sscanf(buf, "%d$%d", &client_move->heap, &client_move->removes);
 		exc_client_move(game, client_move);
-		is_win_pos(&game, 1); // Check for winning pos. if it is a winnig pos, the client (1) wins 
+		is_win_pose(game, 1); // Check for winning pose. if it is a winnig pose, the client (1) wins 
 		if (game->win == 0){
 			exc_server_move(game);
-			is_win_pos(&game, 2); // Check for a winning pos. if it is a winnig pos, the server (2) wins
+			is_win_pose(game, 2); // Check for a winning pose. if it is a winnig pose, the server (2) wins
 		}
 		sprintf(buf, "%d$%d$%d$%d$%d", game->valid, game->win, game->heaps[0], game->heaps[1], game->heaps[2]);
 	}
@@ -136,7 +136,8 @@ int my_bind(int sock, const struct sockaddr_in *myaddr, int size){
 //Executes the server move, removes one piece from the biggest heap
 void exc_server_move(Game_state *game){
 	int heap = 0;
-	for (int i = 1; i < HEAPS_NUM; i++){ //finds the first heap with the highest number of pieces
+	int i;
+	for (i = 1; i < HEAPS_NUM; i++){ //finds the first heap with the highest number of pieces
 		if (game->heaps[heap]<game->heaps[i]){
 			heap = i;
 		}
@@ -146,8 +147,9 @@ void exc_server_move(Game_state *game){
 }
 
 // Helper func - checks if it is a winnig pose
-void is_win_pos(Game_state *game, int winner){
-	for (int i = 0; i < HEAPS_NUM; i++){
+void is_win_pose(Game_state *game, int winner){
+	int i;
+	for (i = 0; i < HEAPS_NUM; i++){
 		if (game->heaps[i]>0) return;
 	}
 	game->win = winner;
