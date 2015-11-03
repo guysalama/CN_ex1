@@ -1,11 +1,12 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
 #include <fcntl.h>
 #include <time.h> 
 #include <assert.h>
 #include <errno.h>
-#include <string.h>
 #include <math.h>
 #include <unistd.h>
 #include <sys/socket.h> //Sockets
