@@ -40,8 +40,8 @@ typedef struct move{
 void op_check(int num, char *func, int sock);
 int my_bind(int sock, const struct sockaddr_in *myaddr, int size);
 void is_win_pose(Game_state *game, int winner);
-void exc_server_move(Game_state **game);
-void exc_client_move(Game_state **game, Move *client_move);
+void exc_server_move(Game_state *game);
+void exc_client_move(Game_state *game, Move *client_move);
 int send_all(int s, char *buf, int *len);
 int receive_all(int s, char *buf, int *len);
 
@@ -53,9 +53,8 @@ int main(int argc, char **argv){
 	char buf[BUF_SIZE];
 
 	int i, port;
-	Game_state *game;
-	Move *client_move;
-
+	Move *client_move = mallac(sizeof(Move));
+	Game_state *game = malloc(sizeof(Game_state));
 	// Initializes the game state and validates the input
 	if (argc < 4 || argc > 5){
 		printf(ILLEGAL_ARGS);
@@ -97,18 +96,20 @@ int main(int argc, char **argv){
 		}
 		op_check(receive_all(sock, buf, &msg_len), "recv", sock);
 		sscanf(buf, "%d$%d", &client_move->heap, &client_move->removes);
-		exc_client_move(&game, client_move);
+		exc_client_move(game, client_move);
 		is_win_pos(&game, 1); // Check for winning pos. if it is a winnig pos, the client (1) wins 
 		if (game->win == 0){
-			exc_server_move(&game);
+			exc_server_move(game);
 			is_win_pos(&game, 2); // Check for a winning pos. if it is a winnig pos, the server (2) wins
 		}
 		sprintf(buf, "%d$%d$%d$%d$%d", game->valid, game->win, game->heaps[0], game->heaps[1], game->heaps[2]);
 	}
+	free(client_move);
+	free(game);
 }
 
 // Executes the client's move, if it's valid
-void exc_client_move(Game_state * game, Move * client_move){ 
+void exc_client_move(Game_state *game, Move *client_move){ 
 	if (client_move->removes<1) game->valid = 0;  // If the removes field equals zero, the move is invalid
 	else if (game->heaps[client_move->heap]<client_move->removes) game->valid = 0;
 	else {
@@ -118,7 +119,7 @@ void exc_client_move(Game_state * game, Move * client_move){
 }
 
 //Checks if the operation returned a negative number and prints an error if needed
-void op_check(int num, char* func, int sock){
+void op_check(int num, char *func, int sock){
 	if (num < 0){
 		printf(OP_ERROR, strerror(errno));
 		// bonus? shutdown(int sock, 0);
@@ -133,7 +134,7 @@ int my_bind(int sock, const struct sockaddr_in *myaddr, int size){
 }
 
 //Executes the server move, removes one piece from the biggest heap
-void exc_server_move(Game_state * game){
+void exc_server_move(Game_state *game){
 	int heap = 0;
 	for (int i = 1; i < HEAPS_NUM; i++){ //finds the first heap with the highest number of pieces
 		if (game->heaps[heap]<game->heaps[i]){
@@ -145,7 +146,7 @@ void exc_server_move(Game_state * game){
 }
 
 // Helper func - checks if it is a winnig pose
-void is_win_pos(Game_state * game, int winner){
+void is_win_pos(Game_state *game, int winner){
 	for (int i = 0; i < HEAPS_NUM; i++){
 		if (game->heaps[i]>0) return;
 	}

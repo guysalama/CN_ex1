@@ -46,21 +46,20 @@ typedef struct move{
 } Move;
 
 //Declarations
-int server_connect(int sock, const char* address, char* port);
-void print_heaps(Game_state * game);
-void print_winner(Game_state * game);
-Game_state * parse_data(char * buf);
-Game_state * receive_data(int sock);
-void print_is_valid_move(Game_state * game);
-char* input2str(FILE* pFile);
-Move * get_client_move(int sock);
+int server_connect(int sock, const char *address, char *port);
+void print_heaps(Game_state *game);
+void print_winner(Game_state *game);
+void receive_data(int sock, Game_state *game);
+void print_is_valid_move(Game_state *game);
+char *input2str(FILE *pFile);
+void get_client_move(int sock, Move *curr_move);
 int send_all(int s, char *buf, int *len);
 int receive_all(int s, char *buf, int *len);
 
 
-int main(int argc, char** argv){
-	char * port;
-	char * address;
+int main(int argc, char **argv){
+	char *port;
+	char *address;
 
 	// Initializes the game state and validates the input
 	if (argc<1 || argc>3){ 
@@ -87,24 +86,30 @@ int main(int argc, char** argv){
 	}
 	sock = server_connect(sock, address, port); // Connect to server
 	char buf[BUF_SIZE];
-	Move * curr_move;
-	Game_state * game = receive_data(sock); // Get initial data
+	Move *curr_move = mallac(sizeof(Move));
+	Game_state *game = malloc(sizeof(Game_state));
+	receive_data(sock, game); // Get initial data
 	print_heaps(game);
 
 	//Client game loop
 	while (game->win == 0){
 		printf(YOUR_TURN);
-		curr_move = get_client_move(sock);
+
+		get_client_move(sock, curr_move);
 		sprintf(buf, "%d$%d", curr_move->heap, curr_move->removes);
 		if (send_all(sock, buf, &msg_len) == -1){
 			close(sock);
 			exit(0);
 		}
-		game = receive_data(sock); // Refresh the data
+		receive_data(sock, game); // Refresh the data
 		printValid(game); // Check if move was valid
 		print_heaps(game); // keep on playing
 	}
 	print_winner(game);
+	free(address);
+	free(port);
+	free(game);
+	free(curr_move);
 	return 0;
 }
 
@@ -180,12 +185,11 @@ char* input2str(FILE* pFile){
 }
 
 // Gets the client's command and handles it, return a new move to be execute by the server
-Move * get_client_move(int sock){
+void get_client_move(int sock, Move *curr_move){
 	int illgal_input = 0;
 	char * command;
 	char * word1;
 	char * word2;
-	Move * curr_move;
 
 	command = input2str(stdin);
 	if (strcmp(command, "Q") == 0){
@@ -195,6 +199,7 @@ Move * get_client_move(int sock){
 	}
 	word1 = strtok(command, " ");
 	word2 = strtok(NULL, " ");
+	//curr_move = malloc(sizeof(Move));
 	if (length(word1) != 1 || (word1[0] - 'A') < 0 || (word1[0] - 'A' - 1) > HEAPS_NUM || atoi(word2) == 0){ // Verifies the move
 		free(word1);
 		free(word2);
@@ -207,13 +212,12 @@ Move * get_client_move(int sock){
 		curr_move->removes = atoi(strtok(NULL, " "));
 	}
 	free(command);
-	return curr_move;
+	return 0;
 }
 
 // Handles the data that received from the server
-Game_state * receive_data(int sock){
+void receive_data(int sock, Game_state *game){
 	char buf[msg_len];
-	Game_state * game;
 	int rec = receive_all(sock, buf, &msg_len);
 	if (rec == -1)
 	{
@@ -221,8 +225,8 @@ Game_state * receive_data(int sock){
 		close(sock);
 		exit(2);
 	}
-	game = parse_data(buf);
-	return game;
+	sscanf(buf, "%d$%d$%d$%d$%d", &game->valid, &game->win, &game->heaps[0], &game->heaps[1], &game->heaps[2]);
+	return 0;
 }
 
 // Prints an error if the move is illeagal or announce that the move accepted
@@ -244,12 +248,6 @@ void print_heaps(Game_state * game){
 	printf("Heap C: %d\n", game->heaps[2]);
 }
 
-// Parses the data from the received message
-Game_state * parse_data(char * buf){
-	Game_state * game;
-	sscanf(buf, "%d$%d$%d$%d$%d", &game->valid, &game->win, &game->heaps[0], &game->heaps[1], &game->heaps[2]);
-	return game;
-}
 
 // Sends all the data to the server
 int send_all(int s, char *buf, int *len) {
