@@ -1,103 +1,115 @@
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h> // for open flags
-#include <time.h> // for time measurement
+#include <fcntl.h> 
+#include <time.h> 
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/socket.h> //Sockets
+#include <netinet/in.h> //Internet addresses
+#include <arpa/inet.h> //Working with Internet addresses
+#include <netdb.h> //Domain Name Service (DNS)
+#include <errno.h> //Working with errno to report errors
 
-//Sockets
-#include <sys/socket.h>
-//Internet addresses
-#include <netinet/in.h>
-//Working with Internet addresses
-#include <arpa/inet.h>
-//Domain Name Service (DNS)
-#include <netdb.h>
-//Working with errno to report errors
-#include <errno.h>
+// Messages
+#define ILLEGAL_ARGS "Illegal arguments\n"
+#define SOCKET_ERROR "Error opening the socket: %s\n"
+#define YOUR_TURN "your turn:\n"
+#define ILLEGAL_INPUT "Illegal input! Game over"
+#define CONNECTION_ERROR "failed to connect\n"
+#define RECEIVE_ERROR "failed to receive data from server\n"
+#define LEGAL_MOVE "Move accepted\n"
+#define ILLEAGAL_MOVE "Illegal move\n"
+#define CLIENT_WIN "You win!\n"
+#define SERVER_WIN "Server win!\n"
+// Constants
+#define DEFAULT_HOST "localhost"
+#define DEFAULT_PORT "6444"
+#define HEAPS_NUM 3
+#define BUF_SIZE 50
 
-struct gameData{
+//Globals
+int msg_len = BUF_SIZE;
+
+//Structures 
+typedef struct state{
 	int valid;
 	int win;
 	int heaps[3];
-};
+} Game_state;
 
-struct move{
+typedef struct move{
 	int heap;
-	int amount;
-};
+	int removes;
+} Move;
 
-int msgSize = 50;
-int HEAPS_NUM = 3;
-int connectToServer(int sock, const char* address, char* port);
-void printGameState(struct gameData game);
-void printWinner(struct gameData game);
-struct gameData parseDataFromServer(char buf[msgSize]);
-struct gameData receiveDataFromServer(int sock);
-void printValid(struct gameData game);
-struct move getMoveFromInput(int sock);
-int sendAll(int s, char *buf, int *len);
-int receiveAll(int s, char *buf, int *len);
-//void checkForZeroValue(int num, int sock);
+//Declarations
+int server_connect(int sock, const char* address, char* port);
+void print_heaps(Game_state * game);
+void print_winner(Game_state * game);
+Game_state * parse_data(char * buf);
+Game_state * receive_data(int sock);
+void print_is_valid_move(Game_state * game);
+char* input2str(FILE* pFile);
+Move * get_client_move(int sock);
+int send_all(int s, char *buf, int *len);
+int receive_all(int s, char *buf, int *len);
 
-int main(int argc, char const *argv[])
-{
-	char port[20];
-	char address[50];
 
-	if (argc<1 || argc>3){
-		printf("Illegal arguments\n");
+int main(int argc, char** argv){
+	char * port;
+	char * address;
+
+	// Initializes the game state and validates the input
+	if (argc<1 || argc>3){ 
+		printf(ILLEGAL_ARGS);
 		exit(1);
 	}
-
-	if (argc == 1)
-	{
-		strcpy(address, "localhost");
+	if (argc == 1 || argc == 2){
+		port = DEFAULT_PORT;
+		if (argc == 1) address = DEFAULT_HOST
 	}
-	else{
-		sscanf(argv[1], "%s", &address);
-	}
-
-	if (argc < 3)
-	{
-		strcpy(port, "6444");
-	}
-	else
-	{
-		sscanf(argv[2], "%s", &port);
+	if (argc == 2 || argc == 3){
+		address = malloc(sizeof(char)*length(argv[1]) + 1);
+		strcpy(address, argv[1]);
+		if (argc == 3){
+			port = malloc(sizeof(char)*length(argv[2]) + 1);
+			strcpy(port, argv[2]);
+		}
 	}
 
 	int sock = socket(AF_INET, SOCK_STREAM, 0); // Get socket
-	if (sock == -1)
-	{
-		printf("Error opening the socket: %s\n", strerror(errno));
+	if (sock == -1){
+		printf(SOCKET_ERROR, strerror(errno));
 		return errno;
 	}
-	sock = connectToServer(sock, address, port); // Connect to server
-	char buf[msgSize];
-	struct move Move;
-	struct gameData game = receiveDataFromServer(sock); // Get initial data
+	sock = server_connect(sock, address, port); // Connect to server
+	char buf[BUF_SIZE];
+	Move * curr_move;
+	Game_state * game = receive_data(sock); // Get initial data
+	print_heaps(game);
 
-	printGameState(game);
-	while (game.win == -1){
-		Move = getMoveFromInput(sock);
-		sprintf(buf, "%d$%d", Move.heap, Move.amount);
-		if (sendAll(sock, buf, &msgSize) == -1){
+	//Client game loop
+	while (game->win == 0){
+		printf(YOUR_TURN);
+		curr_move = get_client_move(sock);
+		sprintf(buf, "%d$%d", curr_move->heap, curr_move->removes);
+		if (send_all(sock, buf, &msg_len) == -1){
 			close(sock);
 			exit(0);
 		}
-		game = receiveDataFromServer(sock);
+		game = receive_data(sock); // Refresh the data
 		printValid(game); // Check if move was valid
-		printGameState(game); // keep on playing
+		print_heaps(game); // keep on playing
 	}
-	printWinner(game);
+	print_winner(game);
 	return 0;
 }
 
-int connectToServer(int sock, const char* address, char* port){
+// Connects to the the server
+int server_connect(int sock, const char* address, char* port){
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	memset(&hints, 0, sizeof hints);
@@ -127,7 +139,7 @@ int connectToServer(int sock, const char* address, char* port){
 
 	if (p == NULL) {
 		// looped off the end of the list with no connection
-		fprintf(stderr, "failed to connect\n");
+		fprintf(stderr, CONNECTION_ERROR);
 		close(sock);
 		exit(2);
 	}
@@ -136,80 +148,117 @@ int connectToServer(int sock, const char* address, char* port){
 	return sock;
 }
 
-struct move getMoveFromInput(int sock){
-	int heap, amount;
-	char heapC;
-	char cmd[10];
-
-	printf("Your turn:\n");
-	fgets(cmd, 10, stdin);
-	if (strcmp(cmd, "Q") == 0) // Exit if user put Q
+// Handles client input (unknown length), returns a string without redundant white spaces after each new line
+char* input2str(FILE* pFile){ 
+	char *str;
+	char ch;
+	char pch = '~';
+	size_t size = 10;
+	size_t len = 0;
+	str = malloc(sizeof(char)*size);
+	ch = fgetc(pFile);
+	while (ch != EOF && ch != '\n')
 	{
-		close(sock);
-		exit(0);
+		if ((pch != '~' && pch != ' ') || (ch != ' ')){
+			str[len++] = ch;
+			if (len == size)
+			{
+				size = 2 * size;
+				str = realloc(str, sizeof(char)*size);
+			}
+			pch = ch;
+			ch = fgetc(pFile);
+		}
+		else{
+			pch = ch;
+			ch = fgetc(pFile);
+		}
 	}
-	sscanf(cmd, "%c %d", &heapC, &amount);
-	heap = (int) heapC - (int) 'A';
-	if (heap < 0 || heap > HEAPS_NUM - 1)
-	{
-		printf("Illegal input!!!\n");
-		close(sock);
-		exit(1);
-	}
-	struct move Move;
-	Move.heap = heap;
-	Move.amount = amount;
-	return Move;
+	str[len++] = '\0';
+	str = realloc(str, sizeof(char)*len);
+	return str;
 }
 
-struct gameData receiveDataFromServer(int sock)
-{
-	char buf[msgSize];
-	struct gameData game;
-	int rec = receiveAll(sock, buf, &msgSize);
+// Gets the client's command and handles it, return a new move to be execute by the server
+Move * get_client_move(int sock){
+	int illgal_input = 0;
+	char * command;
+	char * word1;
+	char * word2;
+	Move * curr_move;
+
+	command = input2str(stdin);
+	if (strcmp(command, "Q") == 0){
+		close(sock);
+		free(command);
+		exit(0);
+	}
+	word1 = strtok(command, " ");
+	word2 = strtok(NULL, " ");
+	if (length(word1) != 1 || (word1[0] - 'A') < 0 || (word1[0] - 'A' - 1) > HEAPS_NUM || atoi(word2) == 0){ // Verifies the move
+		free(word1);
+		free(word2);
+		curr_move->heap = 0;
+		curr_move->removes = 0; // The removes of an invalid move will be marked with zero  
+		exit(1);
+	}
+	else {
+		curr_move->heap = (int)(word1[0] - 'A');
+		curr_move->removes = atoi(strtok(NULL, " "));
+	}
+	free(command);
+	return curr_move;
+}
+
+// Handles the data that received from the server
+Game_state * receive_data(int sock){
+	char buf[msg_len];
+	Game_state * game;
+	int rec = receive_all(sock, buf, &msg_len);
 	if (rec == -1)
 	{
-		fprintf(stderr, "failed to receive initial data\n");
+		fprintf(stderr, RECEIVE_ERROR);
 		close(sock);
 		exit(2);
 	}
-	game = parseDataFromServer(buf);
+	game = parse_data(buf);
 	return game;
 }
 
-void printValid(struct gameData game)
-{
-	if (game.valid == 1) printf("Move accepted\n");
-	else printf("Illegal move\n");
+// Prints an error if the move is illeagal or announce that the move accepted
+void print_is_valid_move(Game_state * game){
+	if (game->valid == 1) printf(LEGAL_MOVE);
+	else printf(ILLEAGAL_MOVE);
 }
 
-void printWinner(struct gameData game)
-{
-	if (game.win == 1) printf("You win!\n");
-	else if (game.win == 2) printf("Server win!\n");
+// Prints the game winner
+void print_winner(Game_state * game){
+	if (game->win == 1) printf(CLIENT_WIN);
+	else if (game->win == 2) printf(SERVER_WIN);
 }
 
-void printGameState(struct gameData game){
-	printf("Heap A: %d\n", game.heaps[0]);
-	printf("Heap B: %d\n", game.heaps[1]);
-	printf("Heap C: %d\n", game.heaps[2]);
+// Prints the number of pieces in every heap
+void print_heaps(Game_state * game){
+	printf("Heap A: %d\n", game->heaps[0]);
+	printf("Heap B: %d\n", game->heaps[1]);
+	printf("Heap C: %d\n", game->heaps[2]);
 }
 
-struct gameData parseDataFromServer(char buf[msgSize]){
-	struct gameData game;
-	sscanf(buf, "%d$%d$%d$%d$%d", &game.valid, &game.win, &game.heaps[0], &game.heaps[1], &game.heaps[2]);
+// Parses the data from the received message
+Game_state * parse_data(char * buf){
+	Game_state * game;
+	sscanf(buf, "%d$%d$%d$%d$%d", &game->valid, &game->win, &game->heaps[0], &game->heaps[1], &game->heaps[2]);
 	return game;
 }
 
-
-int sendAll(int s, char *buf, int *len) {
+// Sends all the data to the server
+int send_all(int s, char *buf, int *len) {
 	int total = 0; // how many bytes we've sent
 	int bytesleft = *len; // how many we have left to send 
 	int n;
 	while (total < *len) {
 		n = send(s, buf + total, bytesleft, 0);
-		//checkForZeroValue(n,s);
-		if (n == -1) { break; }
+		if (n == -1) break;
 		total += n;
 		bytesleft -= n;
 	}
@@ -217,27 +266,19 @@ int sendAll(int s, char *buf, int *len) {
 	return n == -1 ? -1 : 0; // -1 on failure, 0 on success
 }
 
-int receiveAll(int s, char *buf, int *len) {
+// Receives all the data from the server
+int receive_all(int s, char *buf, int *len) {
 	int total = 0; // how many bytes we've received
 	size_t bytesleft = *len; // how many we have left to receive
 	int n;
 
 	while (total < *len) {
 		n = recv(s, buf + total, bytesleft, 0);
-		//checkForZeroValue(n,s);
-		if (n == -1) { break; }
+		if (n == -1) break; 
 		total += n;
 		bytesleft -= n;
 	}
-	*len = total; // return number actually sent here
+	*len = total; // return number actually received here
 	return n == -1 ? -1 : 0; // -1 on failure, 0 on success
 }
-
-// void checkForZeroValue(int num, int sock){
-//	if(num==0){
-//		printf( "Disconnected from server\n");
-//		close(sock);
-//		exit(1);
-//	}
-//}
 
