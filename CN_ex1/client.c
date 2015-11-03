@@ -69,13 +69,13 @@ int main(int argc, char **argv){
 	}
 	if (argc == 1 || argc == 2){
 		port = DEFAULT_PORT;
-		if (argc == 1) address = DEFAULT_HOST
+		if (argc == 1) address = DEFAULT_HOST;
 	}
 	if (argc == 2 || argc == 3){
 		address = malloc(sizeof(char)*strlen(argv[1]) + 1);
 		strcpy(address, argv[1]);
 		if (argc == 3){
-			port = malloc(sizeof(char)*length(argv[2]) + 1);
+			port = malloc(sizeof(char)*strlen(argv[2]) + 1);
 			strcpy(port, argv[2]);
 		}
 	}
