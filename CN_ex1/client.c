@@ -154,29 +154,29 @@ int server_connect(int sock, const char* address, char* port){
 	return sock;
 }
 
-// Handles client input (unknown length), returns a string without redundant white spaces after each new line
+ //Handles client input (unknown length), returns a string without redundant white spaces after each new line
 char* input2str(FILE* pFile){ 
 	char *str;
 	char ch;
-	char pch = '~';
+	char p_ch = '~';
 	size_t size = 10;
 	size_t len = 0;
 	str = malloc(sizeof(char)*size);
 	ch = fgetc(pFile);
 	while (ch != EOF && ch != '\n')
 	{
-		if ((pch != '~' && pch != ' ') || (ch != ' ')){
+		if ((p_ch != '~' && p_ch != ' ') || (ch != ' ')){
 			str[len++] = ch;
 			if (len == size)
 			{
 				size = 2 * size;
 				str = realloc(str, sizeof(char)*size);
 			}
-			pch = ch;
+			p_ch = ch;
 			ch = fgetc(pFile);
 		}
 		else{
-			pch = ch;
+			p_ch = ch;
 			ch = fgetc(pFile);
 		}
 	}
@@ -185,32 +185,31 @@ char* input2str(FILE* pFile){
 	return str;
 }
 
-// Gets the client's command and handles it, return a new move to be execute by the server
+
+// Gets the client's cmd and handles it, return a new move to be execute by the server
 void get_client_move(int sock, Move *curr_move){
-	char * command;
+	char * cmd;
 	char * word1;
 	char * word2;
 
-	command = input2str(stdin);
-	if (strcmp(command, "Q") == 0){
+	cmd = input2str(stdin);
+	if (strcmp(cmd, "Q") == 0){
+		// bonus? shutdown(sock, 0); 
 		close(sock);
-		free(command);
+		free(cmd);
 		exit(0);
 	}
-	word1 = strtok(command, " ");
+	word1 = strtok(cmd, " ");
 	word2 = strtok(NULL, " ");
-	//curr_move = malloc(sizeof(Move));
 	if (strlen(word1) != 1 || (word1[0] - 'A') < 0 || (word1[0] - 'A' - 1) > HEAPS_NUM || atoi(word2) == 0){ // Verifies the move
-		free(word1);
-		free(word2);
 		curr_move->heap = 0;
 		curr_move->removes = 0; // The removes of an invalid move will be marked with zero  
 	}
 	else {
 		curr_move->heap = (int)(word1[0] - 'A');
-		curr_move->removes = atoi(strtok(NULL, " "));
+		curr_move->removes = atoi(word2);
 	}
-	free(command);
+	free(cmd);
 	return;
 }
 
