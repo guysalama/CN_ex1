@@ -119,7 +119,7 @@ int server_connect(int sock, const char* address, char* port){
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_INET; // use AF_INET6 to force IPv6
+	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 
 	if ((rv = getaddrinfo(address, port, &hints, &servinfo)) != 0) {
