@@ -104,7 +104,7 @@ int main(int argc, char **argv){
 		}
 		receive_data(sock, game); // Refresh the data
 		print_is_valid_move(game); // Check if move was valid
-		print_heaps(game); // keep on playing
+		if (game->win == 0) print_heaps(game); // keep on playing
 	}
 	print_winner(game);
 	free(address);
