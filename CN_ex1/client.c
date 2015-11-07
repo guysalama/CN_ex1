@@ -244,7 +244,6 @@ void print_heaps(Game_state * game){
 	printf("Heap C: %d\n", game->heaps[2]);
 }
 
-
 // Sends all the data to the server
 int send_all(int s, char *buf, int *len) {
 	int total = 0; // how many bytes we've sent

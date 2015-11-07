@@ -60,14 +60,16 @@ int main(int argc, char **argv){
 	// Initializes the game state and validates the input
 	if (argc < 4 || argc > 5){
 		printf(ILLEGAL_ARGS);
-		free(client_move, game);
+		free(client_move);
+		free(game);
 		exit(1);
 	}
 	for (i = 0; i < HEAPS_NUM; i++){
 		sscanf(argv[i + 1], "%d", &game->heaps[i]);
 		if (game->heaps[i]<1 || game->heaps[i]>1000){
 			printf(ILLEGAL_ARGS);
-			free(client_move, game);
+			free(client_move);
+			free(game);
 			exit(1);
 		}
 	}
@@ -96,7 +98,8 @@ int main(int argc, char **argv){
 		if (game->win != 0){ 
 			// bonus? shutdown(sock, 0);
 			close(sock);
-			free(client_move, game);
+			free(client_move);
+			free(game);
 			exit(0); // If the game is over the server disconnect
 		}
 		op_check(receive_all(sock, buf, &msg_len), "recv", sock);
@@ -109,7 +112,8 @@ int main(int argc, char **argv){
 		}
 		sprintf(buf, "%d$%d$%d$%d$%d", game->valid, game->win, game->heaps[0], game->heaps[1], game->heaps[2]);
 	}
-	free(client_move, game);
+	free(client_move);
+	free(game);
 }
 
 // Executes the client's move, if it's valid
