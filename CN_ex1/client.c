@@ -193,7 +193,7 @@ void get_client_move(int sock, Move *curr_move){
 
 	cmd = input2str(stdin);
 	if (strcmp(cmd, "Q") == 0){
-		// bonus? shutdown(sock, 0); 
+		// shutdown(sock, SHUT_RD); //bonus 
 		close(sock);
 		free(cmd);
 		exit(0);

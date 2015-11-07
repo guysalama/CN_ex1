@@ -96,7 +96,7 @@ int main(int argc, char **argv){
 	while (1){
 		op_check(send_all(sock, buf, &msg_len), "send", sock);
 		if (game->win != 0){ 
-			// bonus? shutdown(sock, 0);
+			// shutdown(sock, SHUT_RD); //bonus
 			close(sock);
 			free(client_move);
 			free(game);
@@ -130,7 +130,7 @@ void exc_client_move(Game_state *game, Move *client_move){
 void op_check(int num, char *func, int sock){
 	if (num < 0){
 		printf(OP_ERROR, strerror(errno));
-		// bonus? shutdown(sock, 0);
+		// shutdown(sock, SHUT_RD); //bonus
 		close(sock);
 		exit(1);
 	}
