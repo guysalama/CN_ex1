@@ -56,6 +56,7 @@ char *input2str(FILE *pFile);
 void get_client_move(int sock, Move *curr_move);
 int send_all(int s, char *buf, int *len);
 int receive_all(int s, char *buf, int *len);
+void free_all(char* address, char* port, Move *move, Game_state *game);
 
 
 int main(int argc, char **argv){
