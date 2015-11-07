@@ -100,6 +100,7 @@ int main(int argc, char **argv){
 		sprintf(buf, "%d$%d", curr_move->heap, curr_move->removes);
 		if (send_all(sock, buf, &msg_len) == -1){
 			close(sock);
+			free_all(address, port, curr_move, game);
 			exit(0);
 		}
 		receive_data(sock, game); // Refresh the data
@@ -107,10 +108,7 @@ int main(int argc, char **argv){
 		if (game->win == 0) print_heaps(game); // keep on playing
 	}
 	print_winner(game);
-	free(address);
-	free(port);
-	free(game);
-	free(curr_move);
+	free_all(address, port, curr_move, game);
 	return 0;
 }
 
@@ -278,3 +276,9 @@ int receive_all(int s, char *buf, int *len) {
 	return n == -1 ? -1 : 0; // -1 on failure, 0 on success
 }
 
+void free_all(char* address, char* port, Move *move, Game_state *game){
+	if (strcmp(address, DEFAULT_HOST) != 0) free(address);
+	if (strcmp(port, DEFAULT_PORT) != 0) free(port);
+	free(move);
+	free(game);
+}
