@@ -29,7 +29,7 @@
 #define MOVE_REJECTED "Move rejected: this is not your turn. please wait\n"
 // Constants
 #define DEFAULT_HOST "localhost"
-#define DEFAULT_PORT "6444"
+#define DEFAULT_PORT 6444
 #define HEAPS_NUM 3
 #define BUF_SIZE 300
 #define MSGTXT_SIZE 255
@@ -100,7 +100,7 @@ int LastTurnRemoves = 0;
 // game utils
 int myBind(int sock, const struct sockaddr_in *myaddr, int size);
 int IsBoardClear(struct gameData game);
-void RemoveOnePieceFromBiggestHeap(struct gameData * game);
+//void RemoveOnePieceFromBiggestHeap(struct gameData * game);
 //int MaxNum(int a, int b, int c, int d);
 int CheckAndMakeClientMove(struct clientMsg clientMove);
 
@@ -142,7 +142,7 @@ int main(int argc, char** argv){
 	struct timeval timeout = { 60, 0 };
 
 	int h;
-	char* port;
+	int port;
 
 	if (argc < 4 || argc > 5){
 		printf(ILLEGAL_ARGS);
@@ -154,8 +154,8 @@ int main(int argc, char** argv){
 		game.heaps[j] = h;
 	}
 	
-	if (argc == 5) sscanf(argv[4], "%s", port);
-	else strcpy(port, DEFAULT_PORT);
+	if (argc == 5) sscanf(argv[4], "%d", &port);
+	else port = DEFAULT_PORT;
 
 	game.valid = 1;
 	game.win = -1;
@@ -169,7 +169,7 @@ int main(int argc, char** argv){
 	checkForNegativeValue(sockListen, "socket", sockListen);
 	addrBind.sa_family = AF_INET;
 	myaddr.sin_family = AF_INET;
-	myaddr.sin_port = htons(atoi(port));
+	myaddr.sin_port = htons(port);
 	inAddr.s_addr = htonl(INADDR_ANY);
 	myaddr.sin_addr = inAddr;
 	errorIndicator = myBind(sockListen, &myaddr, sizeof(addrBind));
@@ -337,7 +337,7 @@ void notifyOnDisconnectionToPlayer(int index){
 }
 
 void updateEveryoneOnMove(int index){ 
-	int i;
+	//int i;
 	char buf[MSGTXT_SIZE];
 
 	game.myPlayerId = index; // ClientsQueue[index].clientNum;
@@ -384,7 +384,7 @@ void sendInvalidMoveToPlayer(int index){
 
 //handles msg written by client clientQueue[index]
 void handleIncomingMsg(struct clientMsg data, int index){
-	int i;
+	//int i;
 	char buf[MSGTXT_SIZE];
 	struct gameData newGame;
 
@@ -689,7 +689,7 @@ index - ClientsQueue index of sender
 */
 void handleMsg(struct clientMsg clientMove, int index){
 	struct gameData data;
-	int i;
+	//int i;
 	char buf[MSGTXT_SIZE];
 	int msg_size = MSGTXT_SIZE;
 
