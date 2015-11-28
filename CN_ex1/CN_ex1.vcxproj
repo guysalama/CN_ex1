@@ -79,7 +79,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="client.c" />
+    <ClCompile Include="client2.c" />
     <ClCompile Include="server.c" />
+    <ClCompile Include="server2.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\..\..\Desktop\makefile" />
