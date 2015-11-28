@@ -39,7 +39,7 @@ struct gameData{
 	int valid;
 	int msg; // 1/2 - message by that player . 0 - move
 	int isMyTurn; // 0 - no, 1 - yes
-	int win; // 0 - no one, <player id> - the player id who won
+	int win; //-1 game on, <player id> - the player id who won, 2 - disconnected
 	int myPlayerId; // player id (0/1)
 	int LastTurnHeap; //which heap was removed from. -1 means it was illegal move
 	int LastTurnRemoves; //amount removed from that heap
@@ -94,6 +94,8 @@ int clientIndexTurn = 0;			// current turn of client (index according to queue)
 int conPlayers = 0;					// amount of connected players
 //int conViewers = 0;					// amount of connected viewers
 struct gameData game;				// global game struct
+int LastTurnHeap = 0;
+int LastTurnRemoves = 0;
 
 // game utils
 int myBind(int sock, const struct sockaddr_in *myaddr, int size);
@@ -206,7 +208,7 @@ int main(int argc, char** argv){
 				errorIndicator = receiveFromClient(i);
 				if (errorIndicator < 0){
 					close(ClientsQueue[i].fd);
-					notifyOnWinningToPlayer(i);
+					notifyOnDisconnectionToPlayer(i);
 				}
 				else if (errorIndicator == 1){
 					handleReadBuf(i);
@@ -218,7 +220,7 @@ int main(int argc, char** argv){
 				errorIndicator = sendToClient(i);
 				if (errorIndicator < 0){
 					close(ClientsQueue[i].fd);
-					notifyOnWinningToPlayer(i);
+					notifyOnDisconnectionToPlayer(i);
 				}
 			}
 		}
@@ -253,7 +255,7 @@ void handleReadBuf(int index){
 	else{
 		// client sent a move
 		if (index != clientIndexTurn){
-			// it is not the client turn
+			// it is not the client turn, if didnt catch on the client side
 			sendInvalidMoveToPlayer(index);
 			return;
 		}
@@ -262,15 +264,16 @@ void handleReadBuf(int index){
 		clientIndexTurn = (clientIndexTurn + 1) % (conPlayers); // keep the turn moving only between connected players
 		if (retVal == -1){
 			sendInvalidMoveToPlayer(index);
-			updateEveryoneOnMoveExceptIndex(index);
+			LastTurnHeap = -1;
+			//updateEveryoneOnMoveExceptIndex(index);
 			notifyOnTurn();
 		}
-		else{
-			updateEveryoneOnMove(index);
-			if (retVal == 0) {
-				notifyOnTurn();
-			}
-		}
+		if (retVal == 0) notifyOnTurn();
+		else updateEveryoneOnMove(index);
+		//	if (retVal == 0) {
+		//		notifyOnTurn();
+		//	}
+		//}
 	}
 
 	// deleting read data from readBuf
@@ -315,7 +318,7 @@ void notifyOnTurn(){
 	strcat(ClientsQueue[clientIndexTurn].writeBuf, buf);
 }
 
-void notifyOnWinningToPlayer(int index){ //banko
+void notifyOnDisconnectionToPlayer(int index){
 	char buf[MSGTXT_SIZE];
 	int index;
 
@@ -324,14 +327,14 @@ void notifyOnWinningToPlayer(int index){ //banko
 
 	game.isMyTurn = 0;
 	game.valid = 1;
-	game.win = (index == 0) ? 2 : 1;
+	game.win = 2; // (index == 0) ? 2 : 1;
 	//game.playing = 1;
 
 	createGameDataBuff(game, buf);
 	strcat(ClientsQueue[(index + 1)%2].writeBuf, buf);
 }
 
-void updateEveryoneOnMove(int index){ //banko - whats the differnce between this and updateEveryoneOnMoveExceptIndex?  
+void updateEveryoneOnMove(int index){ 
 	int i;
 	char buf[MSGTXT_SIZE];
 
@@ -346,23 +349,23 @@ void updateEveryoneOnMove(int index){ //banko - whats the differnce between this
 	//}
 }
 
-void updateEveryoneOnMoveExceptIndex(int index){ //banko - need to print: Client # made an illegal move
-	//int i;
-	char buf[MSGTXT_SIZE];
-
-	game.myPlayerId = index; //ClientsQueue[index].clientNum;
-	createGameDataBuff(game, buf);
-	strcat(ClientsQueue[(index + 1) % 2].writeBuf, buf);
-
-	//for (i = 0; i<conPlayers + conViewers; i++){
-	//	if (i == index){
-	//		continue;
-	//	}
-	//	game.playing = ClientsQueue[i].isPlayer;
-	//	createGameDataBuff(game, buf);
-	//	strcat(ClientsQueue[i].writeBuf, buf);
-	//}
-}
+//void updateEveryoneOnMoveExceptIndex(int index){ //banko - need to print: Client # made an illegal move
+//	//int i;
+//	char buf[MSGTXT_SIZE];
+//
+//	game.myPlayerId = index; //ClientsQueue[index].clientNum;
+//	createGameDataBuff(game, buf);
+//	strcat(ClientsQueue[(index + 1) % 2].writeBuf, buf);
+//
+//	//for (i = 0; i<conPlayers + conViewers; i++){
+//	//	if (i == index){
+//	//		continue;
+//	//	}
+//	//	game.playing = ClientsQueue[i].isPlayer;
+//	//	createGameDataBuff(game, buf);
+//	//	strcat(ClientsQueue[i].writeBuf, buf);
+//	//}
+//}
 
 void sendInvalidMoveToPlayer(int index){
 	char buf[MSGTXT_SIZE];
@@ -384,7 +387,7 @@ void handleIncomingMsg(struct clientMsg data, int index){
 	struct gameData newGame;
 
 	newGame.valid = 1;
-	newGame.msg = index + 1; // 1/2 - message by that player . 0 - move
+	newGame.msg = 1; // 1/2 - message by that player . 0 - move //index + 1;
 	//newGame.playing = ClientsQueue[index].isPlayer;
 
 	strncpy(newGame.msgTxt, data.msgTxt, strlen(data.msgTxt));
@@ -688,26 +691,26 @@ void handleMsg(struct clientMsg clientMove, int index){
 	char buf[MSGTXT_SIZE];
 
 	data.valid = 1;
-	data.msg = index;
+	data.msg = 1;
 	strcpy(data.msgTxt, clientMove.msgTxt);
 	createClientMsgBuff(clientMove, buf);
-
-	if (clientMove.recp == -1){
-		// send to all except the sender
-		for (i = 0; i< conPlayers + conViewers; i++){
-			if (i != index){
-				sendAll(ClientsQueue[i].fd, buf, &MSGTXT_SIZE);
-			}
-		}
-	}
-	else{
-		// send only to a specific client number
-		for (i = 0; i< conPlayers + conViewers; i++){
-			if (ClientsQueue[i].clientNum == clientMove.recp){
-				sendAll(ClientsQueue[i].fd, buf, &MSGTXT_SIZE);
-			}
-		}
-	}
+	sendAll(ClientsQueue[(index + 1) % 2]);
+	//if (clientMove.recp == -1){
+	//	// send to all except the sender
+	//	for (i = 0; i< conPlayers + conViewers; i++){
+	//		if (i != index){
+	//			sendAll(ClientsQueue[i].fd, buf, &MSGTXT_SIZE);
+	//		}
+	//	}
+	//}
+	//else{
+	//	// send only to a specific client number
+	//	for (i = 0; i< conPlayers + conViewers; i++){
+	//		if (ClientsQueue[i].clientNum == clientMove.recp){
+	//			sendAll(ClientsQueue[i].fd, buf, &MSGTXT_SIZE);
+	//		}
+	//	}
+	//}
 }
 
 
@@ -717,13 +720,15 @@ void createClientMsgBuff(struct clientMsg data, char* buf){
 		data.msgTxt[0] = 'a';
 		data.msgTxt[1] = '\0';
 	}
-	sprintf(buf, "{%d$%d$%d$%d$%d$%s}",
+	sprintf(buf, "{%d$%d$%d$%s}",
 		data.heap,
-		data.amount,
+		data.removes,
 		data.msg,
-		data.recp,
-		data.moveCount,
+		//data.recp,
+		//data.moveCount,
 		data.msgTxt);
+	LastTurnHeap = data.heap;
+	LastTurnRemoves = data.removes;
 }
 
 int parseClientMsg(char buf[MSGTXT_SIZE], struct clientMsg *data){
@@ -766,8 +771,8 @@ void createGameDataBuff(struct gameData data, char* buf){
 		data.myPlayerId,
 		//data.playing,
 		//data.isMisere,
-		data.LastTurnHeap, //banko
-		data.LastTurnRemoves, //banko
+		LastTurnHeap, 
+		LastTurnRemoves, 
 		data.heaps[0],
 		data.heaps[1],
 		data.heaps[2],
