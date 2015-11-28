@@ -99,7 +99,7 @@ struct gameData game;				// global game struct
 int myBind(int sock, const struct sockaddr_in *myaddr, int size);
 int IsBoardClear(struct gameData game);
 void RemoveOnePieceFromBiggestHeap(struct gameData * game);
-int MaxNum(int a, int b, int c, int d);
+//int MaxNum(int a, int b, int c, int d);
 int CheckAndMakeClientMove(struct clientMsg clientMove);
 
 // common
@@ -424,23 +424,23 @@ int receiveFromClient(int index){
 	return 0;
 }
 
-void sendClientConnected(int fd, struct gameData *data){
-	struct clientData thisClientData;
-	char buf[MSGTXT_SIZE];
-
-	// last one added	
-	thisClientData = ClientsQueue[conViewers + conPlayers];
-
-	data->valid = 1;
-	data->msg = 0;
-	data->myPlayerId = thisClientData.clientNum;
-	data->playing = thisClientData.isPlayer;
-
-	parseGameData(buf, data);
-	int errorIndicator = sendAll(fd, buf, &MSGTXT_SIZE);
-	checkForNegativeValue(errorIndicator, "send", fd);
-
-}
+//void sendClientConnected(int fd, struct gameData *data){
+//	struct clientData thisClientData;
+//	char buf[MSGTXT_SIZE];
+//
+//	// last one added	
+//	thisClientData = ClientsQueue[conPlayers];
+//
+//	data->valid = 1;
+//	data->msg = 0;
+//	data->myPlayerId = thisClientData.clientNum;
+//	data->playing = thisClientData.isPlayer;
+//
+//	parseGameData(buf, data);
+//	int errorIndicator = sendAll(fd, buf, &MSGTXT_SIZE);
+//	checkForNegativeValue(errorIndicator, "send", fd);
+//
+//}
 
 void SendCantConnectToClient(int fd){
 	int errorIndicator;
@@ -533,13 +533,13 @@ int myBind(int sock, const struct sockaddr_in *myaddr, int size){
 	return bind(sock, (struct sockaddr*)myaddr, sizeof(struct sockaddr_in));
 }
 
-int MaxNum(int a, int b, int c, int d){
-	int biggest = a;
-	if (biggest < b) biggest = b;
-	if (biggest < c) biggest = c;
-	if (biggest < d) biggest = d;
-	return biggest;
-}
+//int MaxNum(int a, int b, int c, int d){
+//	int biggest = a;
+//	if (biggest < b) biggest = b;
+//	if (biggest < c) biggest = c;
+//	if (biggest < d) biggest = d;
+//	return biggest;
+//}
 
 int IsBoardClear(struct gameData game){
 	int j;
@@ -738,20 +738,17 @@ int parseClientMsg(char buf[MSGTXT_SIZE], struct clientMsg *data){
 }
 
 int parseGameData(char buf[MSGTXT_SIZE], struct gameData* data){
-	return sscanf(buf, "{%d$%d$%d$%d$%d$%d$%d$%d$%d$%d$%d$%d$%d$%[^}]",
+	return sscanf(buf, "{%d$%d$%d$%d$%d$%d$%d$%d$%d$%d$%[^}]",
 		&data->valid,
 		&data->isMyTurn,
 		&data->msg,
 		&data->win,
-		&data->numOfPlayers,
 		&data->myPlayerId,
-		&data->playing,
-		&data->isMisere,
-		&data->heapA,
-		&data->heapB,
-		&data->heapC,
-		&data->heapD,
-		&data->moveCount,
+		&data->LastTurnHeap,
+		&data->LastTurnRemoves,
+		&data->heaps[0],
+		&data->heaps[1],
+		&data->heaps[2],
 		&data->msgTxt[0]);
 }
 
@@ -761,7 +758,7 @@ void createGameDataBuff(struct gameData data, char* buf){
 		data.msgTxt[0] = 'a';
 		data.msgTxt[1] = '\0';
 	}
-	sprintf(buf, "%d$%d$%d$%d$%d$%d$%d$%d$%d$%d$%[^",
+	sprintf(buf, "{%d$%d$%d$%d$%d$%d$%d$%d$%d$%d$%s}",
 		data.valid,
 		data.isMyTurn,
 		data.msg,
@@ -769,11 +766,11 @@ void createGameDataBuff(struct gameData data, char* buf){
 		data.myPlayerId,
 		//data.playing,
 		//data.isMisere,
+		data.LastTurnHeap, //banko
+		data.LastTurnRemoves, //banko
 		data.heaps[0],
 		data.heaps[1],
 		data.heaps[2],
-		data.LastTurnHeap, //banko
-		data.LastTurnRemoves, //banko
 		//data.heapD,
 		//data.moveCount,
 		data.msgTxt);

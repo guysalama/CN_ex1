@@ -459,6 +459,7 @@ void createGameDataBuff(struct gameData data, char* buf){
 		data.heaps[2],
 		data.msgTxt);
 }
+
 int opponentId(){
 	return (playerId == 2 ? 1 : 2);
 }
