@@ -1,3 +1,9 @@
+/*
+* Client.c
+*
+*  Created on: Nov 25, 2015
+*      Author: dorbank
+*/
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,6 +18,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <errno.h>
 #define STDIN 0
 
 // Messages
@@ -39,8 +46,8 @@ struct gameData{
 	int valid;
 	int msg; // 1/2 - message by that player . 0 - move
 	int isMyTurn; // 0 - no, 1 - yes
-	int win; // 0 - no one, <player id> - the player id who won
-	int myPlayerId; // player id (0/1)
+	int win; // -1 - no one, <player id> - the player id who won, 2 - other player disconnected
+	int myPlayerId; // player id (0/1)/ will be printed (1/2) accordingly
 	int LastTurnHeap; //which heap was removed from. -1 means it was illegal move
 	int LastTurnRemoves; //amount removed from that heap
 	int heaps[3];
@@ -125,8 +132,8 @@ int main(int argc, char const *argv[]){
 	//updateStaticParams//TODO remove
 	playerId = game.myPlayerId;
 	myTurn = game.isMyTurn;
-	printf("You are client %d\n", playerId);
-	if (playerId == 1){
+	printf("You are client %d\n", playerId + 1);
+	if (playerId == 0){
 		printf("Waiting to client 2 to connect.\n");
 		receive_all(sock, readBuf, &bufSize, 1); //wait until second player connects
 	}
@@ -293,7 +300,7 @@ void printWinner(struct gameData game){
 		printf(CLIENT_WIN);
 	}
 	else if (game.win == 2){
-		printf("Client %d was disconnected from the server\n", opponentId());
+		printf("Client %d was disconnected from the server\n", opponentId() + 1);
 		printf("You win.");
 	}
 	else {
@@ -352,11 +359,11 @@ void handleMsg(char *buf){
 
 	struct gameData currGame;
 	assert(9 <= parseGameData(buf, &currGame));
-	if (currGame.msg != 0){//it's a message!
+	if (currGame.msg != 2){//it's a message!
 		char txt[MSGTXT_SIZE];
 		strncpy(txt, currGame.msgTxt, strlen(currGame.msgTxt));
 		txt[strlen(currGame.msgTxt)] = '\0';
-		printf("Client %d: %s\n", currGame.msg, txt);
+		printf("Client %d: %s\n", currGame.msg + 1, txt);
 		return;
 	}
 	//it's a turn!
@@ -459,7 +466,7 @@ void createGameDataBuff(struct gameData data, char* buf){
 		data.heaps[2],
 		data.msgTxt);
 }
-
 int opponentId(){
-	return (playerId == 2 ? 1 : 2);
+	return (playerId == 0 ? 1 : 0);
 }
+
