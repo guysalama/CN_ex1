@@ -27,6 +27,7 @@
 #define CLIENT_LOSE "You lose!\n"
 #define CONNECTION_REJECTION "Client rejected\n"
 #define MOVE_REJECTED "Move rejected: this is not your turn. please wait\n"
+#define OP_ERORR "Error occured wile running %s operation\n"
 // Constants
 #define DEFAULT_HOST "localhost"
 #define DEFAULT_PORT 6444
@@ -151,7 +152,7 @@ int main(int argc, char** argv){
 
 	for (j = 1; j < 4; j++){
 		sscanf(argv[j], "%d", &h);
-		game.heaps[j] = h;
+		game.heaps[j - 1] = h;
 	}
 	
 	if (argc == 5) sscanf(argv[4], "%d", &port);
@@ -185,7 +186,7 @@ int main(int argc, char** argv){
 		FD_SET(sockListen, &fdSetRead);
 
 		// add all clients to fdSetRead
-		for (i = 0; i < 2; i++){
+		for (i = 0; i < conPlayers; i++){
 			FD_SET(ClientsQueue[i].fd, &fdSetRead);
 			if (strlen(ClientsQueue[i].writeBuf) > 0){
 				FD_SET(ClientsQueue[i].fd, &fdSetWrite);
@@ -270,8 +271,9 @@ void handleReadBuf(int index){
 			//updateEveryoneOnMoveExceptIndex(index);
 			notifyOnTurn();
 		}
-		if (retVal == 0) notifyOnTurn();
-		else updateEveryoneOnMove(index);
+		else if (retVal == 1) notifyOnDisconnectionToAll(index);
+		else notifyOnTurn();
+		
 		//	if (retVal == 0) {
 		//		notifyOnTurn();
 		//	}
@@ -306,6 +308,7 @@ void notifyOnTurn(){
 	//newGame.playing = 1;
 	newGame.msg = 0;
 	newGame.win = game.win;
+	newGame.myPlayerId = clientIndexTurn;
 	//newGame.numOfPlayers = game.numOfPlayers;
 	//newGame.isMisere = game.isMisere;
 	for (i = 0; i < HEAPS_NUM; i++) newGame.heaps[i] = game.heaps[i];
@@ -336,15 +339,17 @@ void notifyOnDisconnectionToPlayer(int index){
 	strcat(ClientsQueue[(index + 1)%2].writeBuf, buf);
 }
 
-void updateEveryoneOnMove(int index){ 
-	//int i;
+void notifyOnWinningToAll(int index){
+	int i;
 	char buf[MSGTXT_SIZE];
 
 	game.myPlayerId = index; // ClientsQueue[index].clientNum;
-	createGameDataBuff(game, buf);
-	strcat(ClientsQueue[(index + 1) % 2].writeBuf, buf);
+	game.win = index + 1;
 
-	//for (i = 0; i<conPlayers + conViewers; i++){
+	for (i = 0; i < conPlayers; i++){
+		createGameDataBuff(game, buf);
+		strcat(ClientsQueue[i].writeBuf, buf);
+	}
 	//	game.playing = ClientsQueue[i].isPlayer;
 	//	createGameDataBuff(game, buf);
 	//	strcat(ClientsQueue[i].writeBuf, buf);
@@ -389,7 +394,7 @@ void handleIncomingMsg(struct clientMsg data, int index){
 	struct gameData newGame;
 
 	newGame.valid = 1;
-	newGame.msg = 1; // 1/2 - message by that player . 0 - move //index + 1;
+	newGame.msg = 1;
 	//newGame.playing = ClientsQueue[index].isPlayer;
 
 	strncpy(newGame.msgTxt, data.msgTxt, strlen(data.msgTxt));
@@ -531,7 +536,10 @@ int CheckAndMakeClientMove(struct clientMsg clientMove){
 }
 
 void checkForNegativeValue(int num, char* func, int sock){
-	if (num<0) close(sock);
+	if (num < 0){
+		close(sock);
+		printf(OP_ERORR, func);
+	}
 }
 
 int myBind(int sock, const struct sockaddr_in *myaddr, int size){
@@ -730,19 +738,19 @@ void createClientMsgBuff(struct clientMsg data, char* buf){
 		//data.recp,
 		//data.moveCount,
 		data.msgTxt);
-	LastTurnHeap = data.heap;
-	LastTurnRemoves = data.removes;
 }
 
 int parseClientMsg(char buf[MSGTXT_SIZE], struct clientMsg *data){
-	return sscanf(buf, "{%d$%d$%d$%[^}]",
+	int return_val = sscanf(buf, "{%d$%d$%d$%[^}]",
 		&data->heap,
 		&data->removes,
 		&data->msg,
 		&data->msgTxt[0]);
 		//&data->recp,
 		//&data->moveCount,
-		
+	LastTurnHeap = data->heap;
+	LastTurnRemoves = data->removes;
+	return return_val;
 }
 
 int parseGameData(char buf[MSGTXT_SIZE], struct gameData* data){
