@@ -1,0 +1,41 @@
+erver.c: At top level:
+Server.c:322:6: warning: conflicting types for ‘notifyOnDisconnectionToPlayer’ [enabled by default]
+ void notifyOnDisconnectionToPlayer(int index){
+      ^
+Server.c:212:6: note: previous implicit declaration of ‘notifyOnDisconnectionToPlayer’ was here
+      notifyOnDisconnectionToPlayer(i);
+      ^
+Server.c: In function ‘notifyOnDisconnectionToPlayer’:
+Server.c:324:6: error: ‘index’ redeclared as different kind of symbol
+  int index;
+      ^
+Server.c:322:40: note: previous definition of ‘index’ was here
+ void notifyOnDisconnectionToPlayer(int index){
+                                        ^
+Server.c: In function ‘SendCantConnectToClient’:
+Server.c:457:36: error: lvalue required as unary ‘&’ operand
+  errorIndicator = sendAll(fd, buf, &MSGTXT_SIZE);
+                                    ^
+Server.c: At top level:
+Server.c:676:1: error: expected identifier or ‘(’ before ‘}’ token
+ }
+ ^
+Server.c: In function ‘handleMsg’:
+Server.c:693:2: error: incompatible type for argument 1 of ‘sendAll’
+  sendAll(ClientsQueue[(index + 1) % 2]);
+  ^
+Server.c:556:5: note: expected ‘int’ but argument is of type ‘struct clientData’
+ int sendAll(int s, char *buf, int *len) {
+     ^
+Server.c:693:2: error: too few arguments to function ‘sendAll’
+  sendAll(ClientsQueue[(index + 1) % 2]);
+  ^
+Server.c:556:5: note: declared here
+ int sendAll(int s, char *buf, int *len) {
+     ^
+Server.c: In function ‘parseClientMsg’:
+Server.c:735:3: warning: format ‘%d’ expects argument of type ‘int *’, but argument 6 has type ‘char *’ [-Wformat=]
+   &data->msgTxt[0]);
+   ^
+Server.c:735:3: warning: format ‘%d’ expects a matching ‘int *’ argument [-Wformat=]
+Server.c:735:3: warning: format ‘%[^}’ expects a matching ‘char *’ argument [-Wformat=]
