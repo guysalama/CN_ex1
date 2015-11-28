@@ -141,7 +141,8 @@ int main(int argc, char** argv){
 	fd_set fdSetRead, fdSetWrite;
 	struct timeval timeout = { 60, 0 };
 
-	int port, h;
+	int h;
+	char* port;
 
 	if (argc < 4 || argc > 5){
 		printf(ILLEGAL_ARGS);
@@ -153,7 +154,7 @@ int main(int argc, char** argv){
 		game.heaps[j] = h;
 	}
 	
-	if (argc == 5) sscanf(argv[4], "%d", &port);
+	if (argc == 5) sscanf(argv[4], "%s", port);
 	else strcpy(port, DEFAULT_PORT);
 
 	game.valid = 1;
@@ -450,12 +451,12 @@ void SendCantConnectToClient(int fd){
 	int errorIndicator;
 	char buf[MSGTXT_SIZE];
 	struct gameData newGame;
-
+	int msgtxt_size = MSGTXT_SIZE;
 	// -1 stands for too many clients connected
 	newGame.valid = 0;
 	createGameDataBuff(newGame, buf);
 
-	errorIndicator = sendAll(fd, buf, MSGTXT_SIZE);
+	errorIndicator = sendAll(fd, buf, &msgtxt_size);
 	checkForNegativeValue(errorIndicator, "send", fd);
 
 	close(fd);
@@ -695,7 +696,7 @@ void handleMsg(struct clientMsg clientMove, int index){
 	data.msg = 1;
 	strcpy(data.msgTxt, clientMove.msgTxt);
 	createClientMsgBuff(clientMove, buf);
-	sendAll(ClientsQueue[(index + 1) % 2]);
+	sendAll(ClientsQueue[(index + 1) % 2].fd);
 	//if (clientMove.recp == -1){
 	//	// send to all except the sender
 	//	for (i = 0; i< conPlayers + conViewers; i++){
@@ -733,7 +734,7 @@ void createClientMsgBuff(struct clientMsg data, char* buf){
 }
 
 int parseClientMsg(char buf[MSGTXT_SIZE], struct clientMsg *data){
-	return sscanf(buf, "{%d$%d$%d$%d$%d$%[^}]",
+	return sscanf(buf, "{%d$%d$%d$%d$%[^}]",
 		&data->heap,
 		&data->removes,
 		&data->msg,
