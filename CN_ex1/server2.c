@@ -169,7 +169,7 @@ int main(int argc, char** argv){
 	checkForNegativeValue(sockListen, "socket", sockListen);
 	addrBind.sa_family = AF_INET;
 	myaddr.sin_family = AF_INET;
-	myaddr.sin_port = htons(port);
+	myaddr.sin_port = htons(atoi(port));
 	inAddr.s_addr = htonl(INADDR_ANY);
 	myaddr.sin_addr = inAddr;
 	errorIndicator = myBind(sockListen, &myaddr, sizeof(addrBind));
@@ -691,12 +691,13 @@ void handleMsg(struct clientMsg clientMove, int index){
 	struct gameData data;
 	int i;
 	char buf[MSGTXT_SIZE];
+	int msg_size = MSGTXT_SIZE;
 
 	data.valid = 1;
 	data.msg = 1;
 	strcpy(data.msgTxt, clientMove.msgTxt);
 	createClientMsgBuff(clientMove, buf);
-	sendAll(ClientsQueue[(index + 1) % 2].fd);
+	sendAll(ClientsQueue[(index + 1) % 2].fd, buf, &msg_size);
 	//if (clientMove.recp == -1){
 	//	// send to all except the sender
 	//	for (i = 0; i< conPlayers + conViewers; i++){
@@ -734,7 +735,7 @@ void createClientMsgBuff(struct clientMsg data, char* buf){
 }
 
 int parseClientMsg(char buf[MSGTXT_SIZE], struct clientMsg *data){
-	return sscanf(buf, "{%d$%d$%d$%d$%[^}]",
+	return sscanf(buf, "{%d$%d$%d$%[^}]",
 		&data->heap,
 		&data->removes,
 		&data->msg,
