@@ -117,9 +117,10 @@ void PRINT_Debug(char* msg);
 void SendCantConnectToClient(int fd);
 void sendInvalidMoveToPlayer(int index);
 void updateEveryoneOnMove(int index);
-void updateEveryoneOnMoveExceptIndex(int index);
+//void updateEveryoneOnMoveExceptIndex(int index);
 void notifyOnTurn();
-void notifyOnWinningToPlayer(int index);
+//void notifyOnWinningToPlayer(int index);
+void notifyOnDisconnectionToPlayer(int index);
 
 void addClientToQueue(int newFd);
 //int notifyOnWinningToPlayer(int idx);
@@ -153,7 +154,7 @@ int main(int argc, char** argv){
 	}
 	
 	if (argc == 5) sscanf(argv[4], "%d", &port);
-	else port = DEFAULT_PORT;
+	else strcpy(port, DEFAULT_PORT);
 
 	game.valid = 1;
 	game.win = -1;
@@ -320,9 +321,9 @@ void notifyOnTurn(){
 
 void notifyOnDisconnectionToPlayer(int index){
 	char buf[MSGTXT_SIZE];
-	int index;
+	//int index;
 
-	index = conPlayers;
+	//index = conPlayers;
 	//ClientsQueue[index].isPlayer = 1;
 
 	game.isMyTurn = 0;
@@ -454,7 +455,7 @@ void SendCantConnectToClient(int fd){
 	newGame.valid = 0;
 	createGameDataBuff(newGame, buf);
 
-	errorIndicator = sendAll(fd, buf, &MSGTXT_SIZE);
+	errorIndicator = sendAll(fd, buf, MSGTXT_SIZE);
 	checkForNegativeValue(errorIndicator, "send", fd);
 
 	close(fd);
@@ -677,7 +678,7 @@ return value - 1 deleted client is a player, 0 for viewer, 2 for need to notify 
 	//	conViewers--;
 	//	return 0;
 	//}
-}
+//}
 
 
 
