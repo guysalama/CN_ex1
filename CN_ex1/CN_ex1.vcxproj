@@ -80,8 +80,10 @@
   <ItemGroup>
     <ClCompile Include="client.c" />
     <ClCompile Include="client2.c" />
+    <ClCompile Include="ClientNew.c" />
     <ClCompile Include="server.c" />
     <ClCompile Include="server2.c" />
+    <ClCompile Include="ServerNew.c" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\..\..\Desktop\makefile" />

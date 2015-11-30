@@ -27,6 +27,12 @@
     <ClCompile Include="client2.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ClientNew.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ServerNew.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\..\..\Desktop\makefile">
