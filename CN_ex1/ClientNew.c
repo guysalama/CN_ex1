@@ -1,11 +1,3 @@
-/*
-* Client.c
-*
-*  Created on: Nov 28, 2015
-*      Author: dorbank
-*/
-
-
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,8 +14,6 @@
 #include <netdb.h>
 #include <errno.h>
 
-
-
 // Messages
 #define ILLEGAL_ARGS "Illegal arguments\n"
 #define SOCKET_ERROR "Error opening the socket: %s\n"
@@ -38,34 +28,36 @@
 #define CLIENT_LOSE "You lose!\n"
 #define CONNECTION_REJECTION "Client rejected\n"
 #define MOVE_REJECTED "Move rejected: this is not your turn. please wait\n"
+
 // Constants
 #define DEFAULT_HOST "localhost"
 #define DEFAULT_PORT "6444"
 #define HEAPS_NUM 3
 #define BUF_SIZE 300
-#define MSGTXT_SIZE 100
+#define MSGTXT_SIZE 200
 #define STDIN 0
 
+// Structs
 struct gameData{
 	int valid;
 	int msg; // 1/2 - message by that player . 0 - move
 	int isMyTurn; // 0 - no, 1 - yes
-	int win; // -1 - no one, <player id> - the player id who won, 2 - other player disconnected
-	int myPlayerId; // player id (0/1)/ will be printed (1/2) accordingly
-	int LastTurnHeap; //which heap was removed from. -1 means it was illegal move
-	int LastTurnRemoves; //amount removed from that heap
-	int heaps[3];
-	char msgTxt[100];
+	int win; //-1 game on, <player id> - the player id who won, 2 - other player disconnected
+	int myPlayerId; // player id (0/1)
+	int LastTurnHeap; //which heap was removed from.
+	int LastTurnRemoves; //how many cubes removed from that heap
+	int heaps[3]; //the status of each heap
+	char msgTxt[200]; //free text space
 };
 
 struct clientMsg{
-	int heap;
-	int removes;
+	int heap; //which heap to remove from
+	int removes; //how many cubes to remove
 	int msg; // 1 - this is a message, 0 - this is a move
-	char msgTxt[100];
+	char msgTxt[200]; //free text space
 };
 
-// client globals
+// Globals
 int playerId, myTurn;
 struct gameData game;
 struct clientMsg cmQueue[5];
@@ -74,23 +66,18 @@ int cmQueueLength = 0;
 int connectToServer(int sock, const char* address, char* port);
 void printGameState(struct gameData game);
 void printWinner(struct gameData game);
-void printValid(struct gameData game);
 struct clientMsg getMoveFromInput(int sock, char* cmd);
-
-// common
 int send_all(int s, char *buf, int *len);
 int receive_all(int s, char *buf, int *len, int first);
 void checkForZeroValue(int num, int sock);
-void checkForNegativeValue(int num, char* func, int sock);
+void opCheck(int num, char* func, int sock);
 int parseClientMsg(char buf[BUF_SIZE], struct clientMsg *data);
 void createClientMsgBuff(struct clientMsg data, char* buf);
 void createGameDataBuff(struct gameData data, char* buf);
 int parseGameData(char buf[BUF_SIZE], struct gameData* data);
-void updateStaticParams();
 void handleMsg(char *buf);
 void handleFirstMsg(char *buf);
 int opponentId();
-void updateStaticParams();
 
 int main(int argc, char const *argv[]){
 	char port[20];
@@ -122,13 +109,12 @@ int main(int argc, char const *argv[]){
 	char readBuf[BUF_SIZE];
 	int bufSize = BUF_SIZE;
 	receive_all(sock, readBuf, &bufSize, 1);
-	//got the initial data from the server
+	// Get the initial data from the server
 	if (game.valid == 0){
 		printf(CONNECTION_REJECTION);
 		return 0;
 	}
 
-	//updateStaticParams//TODO remove
 	playerId = game.myPlayerId;
 	myTurn = game.isMyTurn;
 	printf("You are client %d\n", playerId + 1);
@@ -145,7 +131,6 @@ int main(int argc, char const *argv[]){
 	if (myTurn == 1){
 		printf(YOUR_TURN);
 	}
-	//printf("before loop\n");
 	while (game.win == -1){
 		int maxClientFd = sock;
 
@@ -159,8 +144,7 @@ int main(int argc, char const *argv[]){
 		}
 
 		int fdReady = select(maxClientFd + 1, &fdSetRead, &fdSetWrite, NULL, NULL);
-		if (fdReady == 0){ //chicken check. TODO what happens in case of disconnection????
-			//printf("D: no fd ready\n");
+		if (fdReady == 0){ //chicken check.
 			continue;
 		}
 
@@ -258,12 +242,16 @@ struct clientMsg getMoveFromInput(int sock, char* cmd){
 
 	// Exit if user put Q
 	if (cmd[0] == 'Q'){
+		int buf = BUF_SIZE;
+		send_all(sock, "", &buf);
 		close(sock);
 		exit(0);
 	}
 
 	if (sscanf(cmd, "MSG %[^\n]", msg) == 1){
 		m.msg = 1;
+		m.heap = 1;
+		m.removes = 1;
 		strcpy(m.msgTxt, msg);
 		m.msgTxt[strlen(msg)] = '\0';
 		return m;
@@ -271,11 +259,6 @@ struct clientMsg getMoveFromInput(int sock, char* cmd){
 
 	sscanf(cmd, "%c %d", &heapC, &removes);
 	heap = (int)heapC - (int)'A';
-	if (heap < 0 || heap > 2){
-		printf(ILLEGAL_INPUT);
-		close(sock);
-		exit(1);
-	}
 
 	m.heap = heap;
 	m.removes = removes;
@@ -284,22 +267,13 @@ struct clientMsg getMoveFromInput(int sock, char* cmd){
 	return m;
 }
 ////////////////////////   prints   //////////////////////////////////
-void printValid(struct gameData game){
-	if (game.valid == 1){
-		printf(LEGAL_MOVE);
-	}
-	else{
-		printf(ILLEGAL_MOVE);
-	}
-}
-
 void printWinner(struct gameData game){
 	if (game.win == playerId){
 		printf(CLIENT_WIN);
 	}
 	else if (game.win == 2){
 		printf("Client %d was disconnected from the server\n", opponentId() + 1);
-		printf("You win.");
+		printf(CLIENT_WIN);
 	}
 	else {
 		printf(CLIENT_LOSE);
@@ -333,16 +307,14 @@ int receive_all(int s, char *buf, int *len, int first) {
 	int endOfMsg = 0;
 	int index = 0;
 	int beforeFirst = 1;
-	while (endOfMsg == 0) {
-		char rBuff[500];
+	while (endOfMsg == 0) {//case we get bad packet, we check manually.
+		char rBuff[400];
 		if (beforeFirst == 0){
-			n = recv(s, rBuff + total, 500, 0);
-			//printf("D: recv came back(rBuff):%s\n",rBuff );
+			n = recv(s, rBuff + total, 400, 0);
 			strcat(buf, rBuff);
 		}
 		else{
 			n = recv(s, buf + total, bytesleft, 0);
-			//printf("D: recv came back:%s\n",buf );
 			beforeFirst = 0;
 		}
 		//checkForZeroValue(n,s);
@@ -351,7 +323,6 @@ int receive_all(int s, char *buf, int *len, int first) {
 		bytesleft -= n;
 		const char *ptr = strchr(buf, '}');
 		while (ptr) {
-			// remove the first msg
 			index = ptr - buf + 1;
 			// Handle msg!!!
 			if (first == 1){
@@ -363,51 +334,26 @@ int receive_all(int s, char *buf, int *len, int first) {
 			char currBuf[BUF_SIZE];
 			strcpy(currBuf, buf);
 			currBuf[index] = '\0';
-			//printf("buf:%s\n",currBuf);
 			handleMsg(currBuf);
-			//printf("1finish to handle msg\n");
-			//printf("BUF:%s, index:%d, buf[index]:%c\n",buf,index,buf[index]);
-			//char buf2[BUF_SIZE];
-			//strcpy(buf2, buf+index);
-			//printf("copied buf2:%s\n",buf2);
-			//strcpy(buf, buf2);
 			strcpy(buf, currBuf);
-			//printf("2finish to handle msg\n");
-			//printf("D: read full msg\n");
 			endOfMsg = 1;
-			break; //TODO
-			if (buf[0] != '{'){
-				printf("D: set end of msg to 1\n");
-				endOfMsg = 1;
-			}
-			//printf("3finish to handle msg\n");
-			const char* startPtr = strchr(buf, '{');
-			if (!startPtr){
-				buf[0] = '\0';
-				return 0;
-			}
-			ptr = strchr(buf, '}');
-			printf("4finish to handle msg\n");
+			break;
 		}
 		if (first == 1){
 			break;
 		}
 	}
 	*len = total; // return number actually sent here
-	//printf("D: finish receiving all\n");
 	return n == -1 ? -1 : 0; //-1 on failure, 0 on success
 }
 ////////////////////// message handlers /////////////////////////////
 void handleFirstMsg(char *buf){
-	//printf("before parsing\n");
 	parseGameData(buf, &game);
 }
 
 void handleMsg(char *buf){
 	int oldMyTurn = game.isMyTurn;
-
 	struct gameData currGame;
-	//assert(9 <= parseGameData(buf, &currGame));
 	parseGameData(buf, &currGame);
 	if (currGame.msg != 0){//it's a message!
 		char txt[MSGTXT_SIZE];
@@ -417,10 +363,8 @@ void handleMsg(char *buf){
 		return;
 	}
 	//it's a turn!
-	assert(11 <= parseGameData(buf, &game));
-	//updateStaticParams(); TODO
+	parseGameData(buf, &game);
 	myTurn = game.isMyTurn;
-
 	if (oldMyTurn == 1 && myTurn == 0){//turn is changed. I must have sent a move!
 		if (game.valid == 1){
 			printf(LEGAL_MOVE);
@@ -453,7 +397,7 @@ void checkForZeroValue(int num, int sock){
 	}
 }
 
-void checkForNegativeValue(int num, char* func, int sock){
+void opCheck(int num, char* func, int sock){
 	if (num<0){
 		printf("Error: %s\n", strerror(errno));
 		close(sock);
@@ -524,6 +468,3 @@ int opponentId(){
 	return (playerId == 0 ? 1 : 0);
 }
 
-void updateStaticParams(){
-	myTurn = game.isMyTurn;
-}
